@@ -5,6 +5,7 @@ import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { useLanguage } from '../../App';
+import api from '../../lib/api'; // Import the API utility
 
 const JobDescriptionMaker = () => {
   const { language } = useLanguage();
@@ -22,6 +23,7 @@ const JobDescriptionMaker = () => {
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState('');
+  const [error, setError] = useState(null);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -32,43 +34,27 @@ const JobDescriptionMaker = () => {
 
   const generateDescription = async () => {
     setIsGenerating(true);
-    
-    // Simulate AI generation
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const mockResult = `
-# ${formData.jobTitle}
+    setError(null);
+    setResult('');
 
-## About the Role
-We are seeking a talented ${formData.jobTitle} to join our dynamic team at ${formData.company}. This is an exciting opportunity to work in a ${formData.jobType} capacity from our ${formData.location} location.
-
-## Key Responsibilities
-- Lead and manage complex projects from conception to completion
-- Collaborate with cross-functional teams to deliver high-quality solutions
-- Mentor junior team members and contribute to team growth
-- Stay updated with industry trends and best practices
-- ${formData.responsibilities}
-
-## Required Skills & Experience
-- ${formData.experience} years of relevant experience
-- Strong expertise in ${formData.skills}
-- Excellent communication and leadership skills
-- Problem-solving mindset with attention to detail
-- Bachelor's degree in relevant field or equivalent experience
-
-## What We Offer
-- Competitive salary and performance bonuses
-- Comprehensive health and dental coverage
-- Flexible working arrangements
-- Professional development opportunities
-- ${formData.benefits}
-
-## How to Apply
-Send your resume and cover letter to our HR team. We look forward to hearing from you!
-    `;
-    
-    setResult(mockResult);
-    setIsGenerating(false);
+    try {
+      const response = await api.post('/job-description-maker', {
+        jobTitle: formData.jobTitle,
+        company: formData.company,
+        location: formData.location,
+        jobType: formData.jobType,
+        experience: formData.experience,
+        skills: formData.skills,
+        responsibilities: formData.responsibilities,
+        benefits: formData.benefits,
+      });
+      setResult(response.data.jobDescription); // Assuming API returns { jobDescription: "..." }
+    } catch (err) {
+      console.error('Error generating job description:', err);
+      setError(language === 'en' ? 'Failed to generate job description. Please try again.' : 'خطا در تولید شرح شغل. لطفاً دوباره تلاش کنید.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -229,6 +215,11 @@ Send your resume and cover letter to our HR team. We look forward to hearing fro
 
           {/* Result */}
           <div className="glass rounded-2xl p-8">
+            {error && (
+              <div className="mb-4 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg">
+                {error}
+              </div>
+            )}
             {result ? (
               <div>
                 <div className="flex justify-between items-center mb-6">

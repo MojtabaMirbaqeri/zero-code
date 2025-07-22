@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Upload, FileText, Star, TrendingUp, Download, Share2, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../../App';
+import api from '../../lib/api';
 
 const JobMatchingEngine = () => {
   const { language } = useLanguage();
   const [resumeFile, setResumeFile] = useState(null);
+  const [resumeText, setResumeText] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [results, setResults] = useState(null);
+  const [error, setError] = useState(null);
   const [preferences, setPreferences] = useState({
     location: '',
     salaryRange: '',
@@ -19,87 +22,37 @@ const JobMatchingEngine = () => {
     const file = event.target.files[0];
     if (file) {
       setResumeFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setResumeText(e.target.result);
+      };
+      reader.readAsText(file);
     }
   };
 
   const analyzeResume = async () => {
-    if (!resumeFile) return;
+    if (!resumeFile) {
+      setError(language === 'en' ? 'Please upload a resume file.' : 'لطفاً یک فایل رزومه آپلود کنید.');
+      return;
+    }
     
     setIsAnalyzing(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      setResults({
-        matches: [
-          {
-            id: 1,
-            title: 'Senior Software Engineer',
-            company: 'TechCorp Inc.',
-            location: 'San Francisco, CA',
-            salary: '$120,000 - $160,000',
-            matchScore: 95,
-            skills: ['React', 'Node.js', 'TypeScript', 'AWS'],
-            requirements: ['5+ years experience', 'Bachelor\'s degree', 'Team leadership'],
-            benefits: ['Health insurance', 'Remote work', '401k matching'],
-            description: 'We are looking for a senior software engineer to join our growing team...',
-            reasons: [
-              'Strong match in required programming languages',
-              'Experience level aligns perfectly',
-              'Previous work in similar company size',
-              'Leadership experience matches requirements'
-            ]
-          },
-          {
-            id: 2,
-            title: 'Full Stack Developer',
-            company: 'StartupXYZ',
-            location: 'Remote',
-            salary: '$90,000 - $130,000',
-            matchScore: 88,
-            skills: ['JavaScript', 'Python', 'React', 'MongoDB'],
-            requirements: ['3+ years experience', 'Full-stack experience'],
-            benefits: ['Equity', 'Flexible hours', 'Learning budget'],
-            description: 'Join our innovative startup as a full-stack developer...',
-            reasons: [
-              'Technical skills are a strong match',
-              'Startup experience is valued',
-              'Remote work preference alignment',
-              'Growth potential matches career goals'
-            ]
-          },
-          {
-            id: 3,
-            title: 'Frontend Developer',
-            company: 'DesignStudio',
-            location: 'New York, NY',
-            salary: '$80,000 - $110,000',
-            matchScore: 82,
-            skills: ['React', 'CSS', 'JavaScript', 'Figma'],
-            requirements: ['3+ years frontend experience', 'Design collaboration'],
-            benefits: ['Creative environment', 'Professional development'],
-            description: 'We need a frontend developer who loves creating beautiful UIs...',
-            reasons: [
-              'Frontend specialization matches',
-              'Design collaboration experience',
-              'Portfolio demonstrates relevant skills',
-              'Company culture alignment'
-            ]
-          }
-        ],
-        profile: {
-          skills: ['React', 'Node.js', 'TypeScript', 'Python', 'AWS', 'MongoDB'],
-          experience: '5 years',
-          education: 'Bachelor\'s in Computer Science',
-          strengths: ['Full-stack development', 'Team leadership', 'Problem solving'],
-          recommendations: [
-            'Consider highlighting your AWS certifications',
-            'Add more details about team leadership experience',
-            'Include specific project metrics and achievements'
-          ]
-        }
+    setError(null);
+    setResults(null);
+
+    try {
+      const response = await api.post('/job-matching-engine', {
+        resumeText: resumeText,
+        preferences: preferences,
+        language: language,
       });
+      setResults(response.data); // Assuming API returns { matches: [...], profile: {...} }
+    } catch (err) {
+      console.error('Error analyzing resume:', err);
+      setError(language === 'en' ? 'Failed to analyze resume. Please try again.' : 'خطا در تحلیل رزومه. لطفاً دوباره تلاش کنید.');
+    } finally {
       setIsAnalyzing(false);
-    }, 3000);
+    }
   };
 
   const getScoreColor = (score) => {
@@ -139,13 +92,13 @@ const JobMatchingEngine = () => {
                 <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
                   {language === 'en' 
-                    ? 'Drop your resume here or click to browse'
+                    ? 'Drop your resume here or click to browse' 
                     : 'رزومه خود را اینجا بکشید یا کلیک کنید'
                   }
                 </p>
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx"
+                  accept=".pdf,.doc,.docx,.txt"
                   onChange={handleFileUpload}
                   className="hidden"
                   id="resume-upload"
@@ -219,6 +172,12 @@ const JobMatchingEngine = () => {
                   </select>
                 </div>
               </div>
+
+              {error && (
+                <div className="mt-4 p-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
 
               <button
                 onClick={analyzeResume}

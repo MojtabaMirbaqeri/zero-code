@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Mic, MicOff, Download, RefreshCw, MessageSquare } from 'lucide-react';
 import { useLanguage } from '../../App';
+import api from '../../lib/api';
 
 const AIChatAssistant = () => {
   const { language } = useLanguage();
@@ -8,7 +9,7 @@ const AIChatAssistant = () => {
     {
       id: 1,
       type: 'bot',
-      content: language === 'en' 
+      content: language === 'en'
         ? 'Hello! I\'m your AI HR Assistant. I can help you with job search, career advice, interview preparation, and HR-related questions. How can I assist you today?'
         : 'سلام! من دستیار هوش مصنوعی منابع انسانی شما هستم. می‌توانم در جستجوی شغل، مشاوره شغلی، آماده‌سازی مصاحبه و سوالات مرتبط با منابع انسانی به شما کمک کنم. امروز چگونه می‌توانم کمکتان کنم؟',
       timestamp: new Date()
@@ -17,6 +18,7 @@ const AIChatAssistant = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [error, setError] = useState(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -44,6 +46,15 @@ const AIChatAssistant = () => {
     'چه سوالاتی از مصاحبه‌کننده بپرسم؟'
   ];
 
+  const buildPrompt = (messageContent, type) => {
+    // This is a simplified version based on the user's Python example.
+    // In a real scenario, this would be more complex and specific to each tool.
+    if (type === 'chat') {
+      return `HR Assistant Query:\n${messageContent}\n\nProvide a helpful and concise response.`;
+    }
+    return messageContent;
+  };
+
   const sendMessage = async () => {
     if (!inputMessage.trim()) return;
 
@@ -55,12 +66,33 @@ const AIChatAssistant = () => {
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentMessage = inputMessage;
     setInputMessage('');
     setIsTyping(true);
+    setError(null);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const botResponse = generateBotResponse(inputMessage);
+    try {
+      const promptContent = buildPrompt(currentMessage, 'chat');
+
+      const response = await api.post('/', {
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: language === 'en' 
+              ? 'You are an expert HR assistant. Help users with job search, career advice, interview preparation, resume building, and HR-related questions. Provide practical, actionable advice.'
+              : 'شما یک دستیار متخصص منابع انسانی هستید. به کاربران در جستجوی شغل، مشاوره شغلی، آماده‌سازی مصاحبه، ساخت رزومه و سوالات مرتبط با منابع انسانی کمک کنید. مشاوره‌های عملی و قابل اجرا ارائه دهید.'
+          },
+          {
+            role: 'user',
+            content: promptContent
+          }
+        ],
+        max_tokens: 1000,
+        temperature: 0.7
+      });
+
+      const botResponse = response.data.choices[0].message.content;
       const botMessage = {
         id: Date.now() + 1,
         type: 'bot',
@@ -68,115 +100,11 @@ const AIChatAssistant = () => {
         timestamp: new Date()
       };
       setMessages(prev => [...prev, botMessage]);
+    } catch (err) {
+      console.error('Error sending message to AI chat assistant:', err);
+      setError(language === 'en' ? 'Failed to get a response from the AI assistant. Please try again.' : 'خطا در دریافت پاسخ از دستیار هوش مصنوعی. لطفاً دوباره تلاش کنید.');
+    } finally {
       setIsTyping(false);
-    }, 1500);
-  };
-
-  const generateBotResponse = (userInput) => {
-    const input = userInput.toLowerCase();
-    
-    if (language === 'en') {
-      if (input.includes('interview') || input.includes('prepare')) {
-        return `Great question about interview preparation! Here are some key tips:
-
-1. **Research the company**: Learn about their mission, values, and recent news
-2. **Practice common questions**: Prepare answers for behavioral and technical questions
-3. **Prepare your own questions**: Show interest by asking about the role and company culture
-4. **Review your resume**: Be ready to discuss any experience or skill mentioned
-5. **Plan your setup**: For virtual interviews, test your tech and choose a quiet space
-
-Would you like me to elaborate on any of these points or help you practice specific interview questions?`;
-      }
-      
-      if (input.includes('resume') || input.includes('cv')) {
-        return `Here's what makes a strong resume:
-
-**Essential Sections:**
-• Contact information and professional summary
-• Work experience with quantifiable achievements
-• Skills relevant to the target role
-• Education and certifications
-
-**Pro Tips:**
-• Use action verbs and specific metrics
-• Tailor your resume for each application
-• Keep it concise (1-2 pages max)
-• Use a clean, professional format
-• Include keywords from the job description
-
-Would you like help with any specific section of your resume?`;
-      }
-      
-      if (input.includes('salary') || input.includes('negotiate')) {
-        return `Salary negotiation tips:
-
-**Before Negotiating:**
-• Research market rates for your role and location
-• Document your achievements and value-add
-• Consider the full compensation package
-
-**During Negotiation:**
-• Express enthusiasm for the role first
-• Present your research professionally
-• Be flexible and open to alternatives
-• Consider benefits, not just base salary
-
-**Sample Script:**
-"Based on my research and experience, I was expecting a range of $X-Y. Would there be flexibility in the compensation package?"
-
-Need help with specific negotiation scenarios?`;
-      }
-      
-      return `I understand you're asking about "${userInput}". While I'd love to provide a detailed response, I can help you with:
-
-• **Job Search**: Finding opportunities, application strategies
-• **Interview Prep**: Common questions, best practices
-• **Resume Building**: Content, formatting, optimization
-• **Career Development**: Skills, networking, growth paths
-• **Workplace Issues**: Communication, performance, culture
-
-Could you be more specific about what aspect you'd like help with?`;
-    } else {
-      if (input.includes('مصاحبه') || input.includes('آماده')) {
-        return `سوال عالی درباره آماده‌سازی مصاحبه! در اینجا چند نکته کلیدی آورده‌ام:
-
-۱. **تحقیق درباره شرکت**: درباره ماموریت، ارزش‌ها و اخبار اخیر آن‌ها بیاموزید
-۲. **تمرین سوالات رایج**: پاسخ‌هایی برای سوالات رفتاری و فنی آماده کنید
-۳. **سوالات خود را آماده کنید**: با پرسیدن درباره نقش و فرهنگ شرکت علاقه نشان دهید
-۴. **رزومه خود را مرور کنید**: آماده باشید تا درباره هر تجربه یا مهارت ذکر شده صحبت کنید
-۵. **تنظیمات خود را برنامه‌ریزی کنید**: برای مصاحبه‌های مجازی، فناوری خود را تست کنید
-
-آیا می‌خواهید من هر یک از این نکات را تشریح کنم یا به شما در تمرین سوالات خاص کمک کنم؟`;
-      }
-      
-      if (input.includes('رزومه') || input.includes('سی‌وی')) {
-        return `آنچه که یک رزومه قوی می‌سازد:
-
-**بخش‌های ضروری:**
-• اطلاعات تماس و خلاصه حرفه‌ای
-• تجربه کاری با دستاوردهای قابل اندازه‌گیری
-• مهارت‌های مرتبط با نقش هدف
-• تحصیلات و گواهینامه‌ها
-
-**نکات حرفه‌ای:**
-• از افعال عمل و معیارهای خاص استفاده کنید
-• رزومه خود را برای هر درخواست تطبیق دهید
-• آن را مختصر نگه دارید (حداکثر ۱-۲ صفحه)
-• از قالب تمیز و حرفه‌ای استفاده کنید
-• کلمات کلیدی از شرح شغل را شامل کنید
-
-آیا می‌خواهید در بخش خاصی از رزومه‌تان کمک کنم؟`;
-      }
-      
-      return `متوجه شدم که درباره "${userInput}" سوال می‌پرسید. در حالی که دوست دارم پاسخ تفصیلی ارائه دهم، می‌توانم در موارد زیر به شما کمک کنم:
-
-• **جستجوی شغل**: یافتن فرصت‌ها، استراتژی‌های درخواست
-• **آماده‌سازی مصاحبه**: سوالات رایج، بهترین شیوه‌ها
-• **ساخت رزومه**: محتوا، قالب‌بندی، بهینه‌سازی
-• **توسعه شغلی**: مهارت‌ها، شبکه‌سازی، مسیرهای رشد
-• **مسائل محیط کار**: ارتباطات، عملکرد، فرهنگ
-
-می‌توانید دقیق‌تر بگویید که در کدام جنبه می‌خواهید کمک کنم؟`;
     }
   };
 
@@ -208,11 +136,12 @@ Could you be more specific about what aspect you'd like help with?`;
     setMessages([{
       id: 1,
       type: 'bot',
-      content: language === 'en' 
+      content: language === 'en'
         ? 'Hello! I\'m your AI HR Assistant. How can I help you today?'
         : 'سلام! من دستیار هوش مصنوعی منابع انسانی شما هستم. امروز چگونه می‌توانم کمکتان کنم؟',
       timestamp: new Date()
     }]);
+    setError(null);
   };
 
   return (
@@ -349,6 +278,11 @@ Could you be more specific about what aspect you'd like help with?`;
 
               {/* Input */}
               <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                {error && (
+                  <div className="mb-4 p-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg text-sm">
+                    {error}
+                  </div>
+                )}
                 <div className="flex gap-3">
                   <input
                     ref={inputRef}
@@ -371,7 +305,7 @@ Could you be more specific about what aspect you'd like help with?`;
                   </button>
                   <button
                     onClick={sendMessage}
-                    disabled={!inputMessage.trim()}
+                    disabled={!inputMessage.trim() || isTyping}
                     className="px-4 py-2 bg-gradient-primary text-white rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Send className="w-5 h-5" />
@@ -387,4 +321,5 @@ Could you be more specific about what aspect you'd like help with?`;
 };
 
 export default AIChatAssistant;
+
 

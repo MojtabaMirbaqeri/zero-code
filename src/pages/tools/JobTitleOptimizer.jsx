@@ -5,6 +5,7 @@ import { Input } from '../../components/ui/input';
 import { Textarea } from '../../components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { useLanguage } from '../../App';
+import api from '../../lib/api'; // Import the API utility
 
 // Translation data
 const translations = {
@@ -146,6 +147,7 @@ const JobTitleOptimizer = () => {
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [results, setResults] = useState([]);
+  const [error, setError] = useState(null);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -156,51 +158,24 @@ const JobTitleOptimizer = () => {
 
   const generateTitles = async () => {
     setIsGenerating(true);
-    
-    // Simulate AI generation
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Mock generated titles based on input
-    const mockResults = [
-      {
-        title: `${formData.experience === 'senior' ? 'Senior ' : ''}${formData.jobTitle}${formData.location === 'remote' ? ' (Remote)' : ''}`,
-        seoScore: 92,
-        explanation: language === 'en' 
-          ? 'Includes experience level and location preference, highly searchable'
-          : 'شامل سطح تجربه و ترجیح مکان، قابلیت جستجوی بالا'
-      },
-      {
-        title: `${formData.jobTitle} - ${t.industries[formData.industry] || formData.industry}${formData.location === 'remote' ? ' Remote' : ''}`,
-        seoScore: 88,
-        explanation: language === 'en'
-          ? 'Industry-specific title with clear role definition'
-          : 'عنوان مخصوص صنعت با تعریف واضح نقش'
-      },
-      {
-        title: `${formData.experience === 'lead' ? 'Lead ' : ''}${formData.jobTitle} Specialist${formData.keywords ? ` (${formData.keywords.split(',')[0]})` : ''}`,
-        seoScore: 85,
-        explanation: language === 'en'
-          ? 'Emphasizes specialization and includes key technology'
-          : 'بر تخصص تأکید می‌کند و فناوری کلیدی را شامل می‌شود'
-      },
-      {
-        title: `${formData.jobTitle} Engineer - ${formData.location === 'hybrid' ? 'Hybrid' : 'Full-time'}`,
-        seoScore: 83,
-        explanation: language === 'en'
-          ? 'Professional title with work arrangement clarity'
-          : 'عنوان حرفه‌ای با وضوح ترتیبات کاری'
-      },
-      {
-        title: `${formData.experience === 'entry' ? 'Junior ' : ''}${formData.jobTitle} Position${formData.location === 'onsite' ? ' - On-site' : ''}`,
-        seoScore: 80,
-        explanation: language === 'en'
-          ? 'Clear level indication with location specification'
-          : 'نشان‌دهنده سطح واضح با مشخصات مکان'
-      }
-    ];
-    
-    setResults(mockResults);
-    setIsGenerating(false);
+    setError(null);
+    setResults([]);
+
+    try {
+      const response = await api.post('/job-title-optimization', {
+        jobTitle: formData.jobTitle,
+        industry: formData.industry,
+        experience: formData.experience,
+        location: formData.location,
+        keywords: formData.keywords,
+      });
+      setResults(response.data.optimizedTitles); // Assuming API returns { optimizedTitles: [...] }
+    } catch (err) {
+      console.error('Error generating job titles:', err);
+      setError(language === 'en' ? 'Failed to generate job titles. Please try again.' : 'خطا در تولید عناوین شغلی. لطفاً دوباره تلاش کنید.');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const copyToClipboard = (text) => {
@@ -376,6 +351,13 @@ const JobTitleOptimizer = () => {
             </div>
           </div>
         </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mt-8 p-4 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-lg">
+            {error}
+          </div>
+        )}
 
         {/* Results */}
         {results.length > 0 && (
