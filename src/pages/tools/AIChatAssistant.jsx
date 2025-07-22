@@ -73,8 +73,7 @@ const AIChatAssistant = () => {
 
     try {
       const promptContent = buildPrompt(currentMessage, 'chat');
-
-      const response = await api.post('/', {
+      const response = await api.post("/chat/completions", {
         model: 'gpt-4o-mini',
         messages: [
           {

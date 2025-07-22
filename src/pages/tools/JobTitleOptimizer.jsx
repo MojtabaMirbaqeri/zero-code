@@ -162,7 +162,7 @@ const JobTitleOptimizer = () => {
     setResults([]);
 
     try {
-      const response = await api.post('/job-title-optimization', {
+      const response = await api.post("/job-title-optimization", {
         jobTitle: formData.jobTitle,
         industry: formData.industry,
         experience: formData.experience,

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_KEY = "tpsg-Gw0Un7qEXNNOanbl7TW2EnHgwAGmI3n";
-const BASE_URL = "https://api.metisai.ir/openai/v1";
+const API_KEY = "tpsg-0yBa3HrigYmYh9PqstVmaFr8nrSZVg6";
+const BASE_URL = "https://api.metisai.ir/api/v1/wrapper/openai";
 
 const api = axios.create({
   baseURL: BASE_URL,
