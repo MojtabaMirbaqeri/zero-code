@@ -1,27 +1,50 @@
 {
-  "source": "/:file*.(js)",
-  "headers": [
+  "version": 2,
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
     {
-      "key": "Cache-Control",
-      "value": "public, max-age=31536000, immutable"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  ]
-},
-{
-  "source": "/:file*.(css)",
+  ],
   "headers": [
     {
-      "key": "Cache-Control",
-      "value": "public, max-age=31536000, immutable"
-    }
-  ]
-},
-{
-  "source": "/:file*.(woff2)",
-  "headers": [
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
     {
-      "key": "Cache-Control",
-      "value": "public, max-age=31536000, immutable"
+      "source": "/(.*\\.js)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*\\.css)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*\\.woff2)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ]
 }
